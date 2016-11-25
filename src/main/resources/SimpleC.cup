@@ -1,0 +1,291 @@
+package com.trhoanglee.ast;
+
+parser code {: 
+
+public void syntax_error(Symbol curToken) {
+    if (curToken.value == null) {
+       Errors.fatal(0,0, "SYNTAX ERROR at end of file");
+    }
+    else { 
+       Symbol cur = (Symbol)curToken;
+       Errors.fatal(cur.getLine(), cur.getColumn(),
+            "SYNTAX ERROR while reading token " + ((Scanner)this.getScanner()).getTokName(cur.sym) + " ("+ ((Scanner)this.getScanner()).yytext() + ")");
+    } 
+    System.exit(-1);
+}
+
+
+public void missing_character_error(char c){
+	Symbol cur = (Symbol)cur_token;
+	Errors.fatal(cur.getLine(), cur.getColumn() , "Syntax error: missing '" + c + "' before token " + ((Scanner)this.getScanner()).getTokName(cur.sym) + " ("+ ((Scanner)this.getScanner()).yytext() + ")"); 
+	System.exit(-1);
+} 
+
+:};
+
+
+/* Terminals */
+
+terminal            INT;
+terminal            BOOL;
+terminal            VOID;
+terminal Boolean    TRUE;
+terminal Boolean    FALSE;
+terminal            NULL;
+terminal            IF;
+terminal            ELSE;
+terminal            WHILE;
+terminal            FOR;
+terminal            RETURN;
+terminal String     ID;
+terminal Integer    INTLITERAL;
+terminal String     STRINGLITERAL;
+terminal Double     DOUBLELITERAL;
+terminal            LCURLY;
+terminal            RCURLY;
+terminal            LSQBRACKET;
+terminal            RSQBRACKET; 
+terminal            LPAREN;
+terminal            RPAREN;
+terminal            COMMA;
+terminal            ASSIGN;
+terminal            SEMICOLON;
+terminal            PLUS;
+terminal            MINUS;
+terminal            TIMES;
+terminal            DIVIDE;
+terminal            NOT;
+terminal            AND;
+terminal            OR;
+terminal            EQUALS;
+terminal            NOTEQUALS;
+terminal            LESS;
+terminal            GREATER;
+terminal            LESSEQ;
+terminal            GREATEREQ;
+terminal            ADDROF;
+terminal            SIZEOF;
+terminal            PERIOD;
+terminal            STRUCT;
+terminal            PLUSEQL;
+terminal            MINUSEQL;
+terminal            TIMESEQL;
+terminal            DIVEQL;
+terminal            PERCENT;
+
+/* Nonterminals */
+
+non terminal Program      	program;
+non terminal DeclList      	declList;
+non terminal Decl 			decl;
+non terminal VarDecl 		varDecl;
+non terminal FuncDecl		funcDecl;
+non terminal FuncDef		funcDef;
+non terminal StructDecl		structDecl;
+non terminal VarDeclList	varDeclList; 
+non terminal Formals		formals;
+non terminal FormalsList	formalsList;
+non terminal FormalDecl		formalDecl;
+non terminal FuncBody		funcBody;
+non terminal StmtList		stmtList;
+non terminal Stmt			stmt;
+non terminal IfStmt			ifStmt;
+non terminal IfElseStmt		ifElseStmt;
+non terminal ForStmt		forStmt;
+non terminal ForInitStmt	forInitStmt;
+non terminal WhileStmt		whileStmt;
+non terminal ReturnStmt		returnStmt;
+non terminal CallStmt		callStmt;
+non terminal AssignStmt		assignStmt;
+non terminal Expr			exp;
+non terminal UnaryExpr		unaryExpr;
+non terminal BinaryExpr		binaryExpr;
+non terminal Term			term;
+non terminal Loc			loc;
+non terminal CallExpr		callExpr;
+non terminal ActualList		actualList;
+non terminal ArrayExpr		arrayExpr;
+non terminal Type 			type;
+non terminal ID 			id;
+non terminal 				semicolonProduction;
+non terminal				rcurlyProduction;
+
+precedence left OR;
+precedence left AND;
+precedence nonassoc EQUALS, NOTEQUALS;
+precedence nonassoc LESS, GREATER, LESSEQ, GREATEREQ;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE, PERCENT;
+precedence left LSQBRACKET;
+precedence left ADDROF;
+precedence nonassoc NOT;
+
+precedence right STRUCT,VOID,BOOL,INT,ID,SIZEOF,LCURLY,LPAREN,TRUE,FALSE,NULL,INTLITERAL,DOUBLELITERAL,STRINGLITERAL,RPAREN,RCURLY,COMMA, RETURN;
+precedence right IF, ELSE, FOR, WHILE;
+start with program; 
+
+/*
+ * grammar with actions
+ */
+ 
+program ::= declList: d {: RESULT = new Program(d); :}
+          ;
+
+declList ::= declList: dl decl: d {: RESULT = new NonemptyDeclList(dl, d); :}
+           | /* epsilon */ {: RESULT = new EmptyDeclList(); :}
+           ;
+
+decl ::= varDecl: v {: RESULT = v; :}
+       	| funcDef: f {: RESULT = f; :}
+		| funcDecl: f {: RESULT = f; :}
+		| structDecl: s {: RESULT = s; :}
+		;
+
+varDecl ::= type: t id: i semicolonProduction
+       		{: RESULT = new NormalVarDecl(t, i); :}
+       	| type: t id: i LSQBRACKET INTLITERAL: il RSQBRACKET semicolonProduction	
+      		{: RESULT = new ArrayVarDecl(t, i, il); :}
+		;
+
+semicolonProduction ::= SEMICOLON {: :}
+		| /*	epsilon	*/	{: parser.missing_character_error(';'); :}
+		;
+
+rcurlyProduction ::= RCURLY {: :}
+		| /*	epsilon	*/	{: parser.missing_character_error('}'); :}
+		;
+
+
+funcDef ::= type: t id: i formals: f funcBody: body 
+			{: RESULT = new FuncDef(t, i, f, body); :}
+         ;
+
+funcDecl ::= type: t id: i formals: f semicolonProduction 
+			{: RESULT = new FuncDecl(t, i, f); :}
+		;
+
+formals ::= LPAREN RPAREN {: RESULT = new EmptyFormals(); :}
+		| LPAREN formalsList: f RPAREN 
+			{: RESULT = new NonemptyFormals(f); :} 
+        ;
+
+formalsList ::= formalDecl: f {: RESULT = new SingleFormalsList(f); :}
+		| formalDecl: d COMMA formalsList: l {: RESULT = new MultipleFormalsList(d, l); :}
+		;
+
+formalDecl ::= type: t id: i {: RESULT = new FormalDecl(t, i); :}
+		;
+
+structDecl ::= LCURLY varDeclList: dl stmtList: sl rcurlyProduction 
+			{: RESULT = new StructDecl(dl, sl); :}
+		;
+		
+funcBody ::= LCURLY varDeclList: v stmtList: s rcurlyProduction 
+              {: RESULT = new FuncBody(v, s); :}
+         ;
+		
+stmtList ::= stmtList: l stmt: s {: RESULT = new NonemptyStmtList(l, s); :}
+          |  /* epsilon */ {: RESULT = new EmptyStmtList(); :}
+          ;
+
+stmt ::= ifStmt: s {: RESULT = s; :}
+		| ifElseStmt: s {: RESULT = s; :}
+		| forStmt: s {: RESULT = s; :}
+		| whileStmt: s {: RESULT = s; :}
+		| returnStmt: s {: RESULT = s; :}
+		| callStmt: s {: RESULT = s; :}
+		| assignStmt: s semicolonProduction {: RESULT = new AssignStmtSemicolon(s); :}
+		;
+ifStmt ::= IF LPAREN exp: e RPAREN LCURLY varDeclList: d stmtList: s rcurlyProduction
+				{: RESULT = new IfStmt(e, d, s); :}
+	 	;
+ifElseStmt ::= IF LPAREN exp: e RPAREN LCURLY varDeclList: d1 stmtList: s1 rcurlyProduction ELSE LCURLY varDeclList: d2 stmtList: s2 rcurlyProduction
+					{: RESULT = new IfElseStmt(e, d1, s1, d2, s2); :}
+		; 
+forStmt ::= FOR LPAREN forInitStmt: f1 semicolonProduction exp: e semicolonProduction forInitStmt: f2 RPAREN LCURLY varDeclList: d stmtList: s rcurlyProduction
+					{: RESULT = new ForStmt(f1, e, f2, d, s); :}
+		;			
+whileStmt ::= WHILE LPAREN exp: e RPAREN LCURLY varDeclList: d stmtList: s rcurlyProduction 
+ 					{: RESULT = new WhileStmt(e, d, s); :}
+ 		; 
+returnStmt ::= RETURN exp: e semicolonProduction {: RESULT = new NonemptyReturnStmt(e); :}  
+		| RETURN semicolonProduction {: RESULT = new EmptyReturnStmt(); :}
+		;
+callStmt ::= callExpr: c semicolonProduction {: RESULT = new CallStmt(c); :}
+		;
+		
+forInitStmt ::= assignStmt: a {: RESULT = new NonemptyForInitStmt(a); :}
+		| /* epsilon */	{: RESULT = new EmptyForInitStmt(); :}
+		;		
+		
+assignStmt ::= loc: l ASSIGN exp: e {: RESULT = new AssignStmt(l, e); :}
+		| loc: l PLUSEQL exp: e {: RESULT = new AssignStmt(l, new PlusExpr(l, e)); :}        
+        | loc: l MINUSEQL exp: e {: RESULT = new AssignStmt(l, new MinusExpr(l, e)); :}
+        | loc: l TIMESEQL exp: e {: RESULT = new AssignStmt(l, new TimesExpr(l, e)); :}
+        | loc: l DIVEQL exp: e {: RESULT = new AssignStmt(l, new DivExpr(l, e)); :}
+        ;
+        
+exp ::= unaryExpr: u {: RESULT = u; :}
+		| binaryExpr: b {: RESULT = b; :}
+      	| term: t {: RESULT = t; :}
+      	;
+
+unaryExpr ::= ADDROF exp: e {: RESULT = new AddrOfUnaryExpr(e); :}
+		| NOT exp: e {: new NotUnaryExpr(e); :}
+		| MINUS exp: e {: RESULT = new MinusUnaryExpr(e); :}
+		;
+      
+binaryExpr ::= exp: e1 PLUS exp: e2 {: RESULT = new PlusExpr(e1, e2); :}
+        | exp: e1 MINUS exp: e2 {: RESULT = new MinusExpr(e1, e2); :}
+        | exp: e1 TIMES exp: e2 {: RESULT = new TimesExpr(e1, e2); :} 
+        | exp: e1 DIVIDE exp: e2 {: RESULT = new DivExpr(e1, e2); :} 
+		| exp: e1 PERCENT exp: e2 {: RESULT = new ModuloExpr(e1, e2); :} 
+		| exp: e1 AND exp: e2 {: RESULT = new AndExpr(e1, e2); :} 
+		| exp: e1 OR exp: e2 {: RESULT = new OrExpr(e1, e2); :} 
+		| exp: e1 EQUALS exp: e2 {: RESULT = new EqualsExpr(e1, e2); :} 
+		| exp: e1 NOTEQUALS exp: e2 {: RESULT = new NotEqualsExpr(e1, e2); :} 
+		| exp: e1 LESS exp: e2 {: RESULT = new LessExpr(e1, e2); :} 
+		| exp: e1 GREATER exp: e2 {: RESULT = new GreaterExpr(e1, e2); :} 
+		| exp: e1 LESSEQ exp: e2 {: RESULT = new LessEqExpr(e1, e2); :} 
+		| exp: e1 GREATEREQ exp: e2 {: RESULT = new GreaterEqExpr(e1, e2); :}
+        ;
+        
+term ::= loc: l {: RESULT = l; :}
+       	| INTLITERAL: i {: RESULT = new IntLiteral(i); :}
+		| DOUBLELITERAL: d {: RESULT = new DoubleLiteral(d); :}
+       	| STRINGLITERAL: s {: RESULT = new StringLiteral(s); :}
+       	| TRUE: t {: RESULT = new TrueTerm() ; :} 
+       	| FALSE: f {: RESULT = new FalseTerm(); :}
+ 		| LPAREN exp: e RPAREN {: RESULT = new ExpTerm(e); :} 
+ 		| callExpr: c {: RESULT = c; :}
+ 		| NULL {: RESULT = new NullTerm(); :}
+ 		| SIZEOF LPAREN id: i RPAREN {: RESULT = new SizeOfTerm(i); :}
+       	;
+
+callExpr ::= id: i LPAREN RPAREN {: RESULT = new EmptyCallExpr(i); :}
+		| id: i LPAREN actualList: a RPAREN {: RESULT = new NonemptyCallExpr(i, a); :}
+		;
+
+varDeclList ::= varDeclList: l varDecl: var {: RESULT = new NonemptyVarDeclList(l, var); :}
+              | /* epsilon */ {: RESULT = new EmptyVarDeclList(); :}
+              ;
+              
+actualList ::= exp: e {: RESULT = new SingleActualList(e); :}
+		| actualList: l COMMA exp: e {: RESULT = new MultipleActualList(l, e); :}
+		;
+                 
+type ::= INT {: RESULT = new IntType(); :}
+		| BOOL {: RESULT = new BoolType(); :}
+		| VOID {: RESULT = new VoidType(); :} 
+		| STRUCT id: i {: RESULT = new StructType(i); :}
+       ;
+
+loc ::= id: i {: RESULT = i; :} 
+		| arrayExpr: a {: RESULT = a; :}
+		| loc: l PERIOD id: i {: RESULT = new PeriodLoc(l, i); :}
+      ;
+arrayExpr ::= loc: l LSQBRACKET exp: e RSQBRACKET
+			{: RESULT = new ArrayExpr(l, e); :}
+		; 
+id ::= ID: i {: RESULT = new ID(i); :}
+     ; 

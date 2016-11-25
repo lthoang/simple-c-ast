@@ -1,0 +1,53 @@
+Program
+	DeclList
+		FuncDecl
+			Type (INT)
+			ID (f)
+			LPAREN
+			RPAREN
+			SEMICOLON
+		VarDecl
+			Type (INT)
+			ID (a)
+			SEMICOLON
+		FuncDef
+			type (VOID)
+			ID (main)
+			LPAREN
+			RPAREN
+			FuncBody
+				LCURLY
+					VarDecl
+						Type (INT)
+						ID (a)
+						SEMICOLON
+					VarDecl
+						Type (INT)
+						ID (b)
+						SEMICOLON
+					VarDecl
+						Type (INT)
+						ID (c)
+						SEMICOLON
+					VarDecl
+						Type (INT)
+						ID (d)
+						SEMICOLON
+				StmtList
+					AssignStmt
+						ID (c)
+						ASSIGN
+						PlusExpr
+							ID (a)
+							PLUS
+							ID (b)
+						SEMICOLON
+					AssignStmt
+						ID (d)
+						ASSIGN
+						MinusExpr
+							ID (a)
+							MINUS
+							ID (b)
+						SEMICOLON
+				RCURLY
