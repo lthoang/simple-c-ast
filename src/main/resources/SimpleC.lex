@@ -56,7 +56,7 @@ StringLiteral = L?\"([^\\\"\n]|\\.)*\"
 	
 	"true" { return symbol(TRUE, new Boolean(true)); }
 	
-	"false" { return symbol(FALSE, new Boolean(true)); }
+	"false" { return symbol(FALSE, new Boolean(false)); }
 	
 	"NULL" { return symbol(NULL); }
 	

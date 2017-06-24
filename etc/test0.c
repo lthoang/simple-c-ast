@@ -1,6 +1,7 @@
 int f();
 int a;
-void main() {
+void main()
+{
   int a;
   int b;
   int c;
